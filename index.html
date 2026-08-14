@@ -247,9 +247,17 @@
   letter-spacing: 0.03em;
   pointer-events: none;
   z-index: 100;
-  white-space: nowrap;
+  /* Wraps rather than running off-screen: nowrap held on one line only
+     while the text stayed short, and would overflow a narrow window. */
+  max-width: min(92vw, 1080px);
+  left: 50%;
   text-align: center;
+  line-height: 1.5;
 }
+    /* The block is click-through so it never blocks the graph, but its
+       links have to be reachable or they are decoration. */
+    #attribution a { pointer-events: auto; color: rgba(255,255,255,0.45); }
+    #attribution a:hover { color: rgba(255,255,255,0.8); }
 
 #attribution a {
   color: rgba(255,255,255,0.4);
@@ -350,6 +358,9 @@
   &nbsp;·&nbsp;
   The Guardian. (2026, May 16). The 100 best novels of all time. <em>The Guardian.</em>
   <a href="https://www.theguardian.com/books/ng-interactive/2026/may/16/story-behind-100-best-novels-all-time" target="_blank">theguardian.com</a>
+  &nbsp;·&nbsp;
+  Source code:
+  <a href="https://github.com/ssitari/GuardianBookNetwork" rel="noopener" target="_blank">ssitari/GuardianBookNetwork</a>
 </div>
 
 </body>
