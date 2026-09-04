@@ -1,8 +1,16 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>The Guardian 100 Best Novels</title>
+  <meta name="description" content="A force-directed network of the 172 critics' ballots behind the Guardian's 100 best novels of all time — novels sized by vote count, linked to the voters who ranked them.">
+
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://ssitari.github.io/GuardianBookNetwork/">
+  <meta property="og:title" content="The Guardian 100 Best Novels — Network Visualization">
+  <meta property="og:description" content="A force-directed network of the 172 critics' ballots behind the Guardian's 100 best novels of all time — novels sized by vote count, linked to the voters who ranked them.">
+  <meta name="twitter:card" content="summary_large_image">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -85,7 +93,11 @@
     }
     #panelToggle:hover { color: var(--text); }
 
-    #panel-body { padding: 13px 14px 14px; }
+    #panel-body {
+      padding: 13px 14px 14px;
+      max-height: calc(100vh - 92px);
+      overflow-y: auto;
+    }
 
     /* ── Dropdowns ──────────────────────────────────────────────────── */
     .filter-group { margin-bottom: 9px; }
@@ -236,6 +248,25 @@
       z-index: 100;
       white-space: nowrap;
     }
+    #hint .touch { display: none; }
+    @media (hover: none) {
+      #hint .pointer { display: none; }
+      #hint .touch   { display: inline; }
+    }
+
+    /* ── Load failure ───────────────────────────────────────────────── */
+    #error {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      max-width: 420px;
+      text-align: center;
+      line-height: 1.6;
+      font-size: 13px;
+      color: var(--text);
+    }
+    #error a { color: var(--accent); }
 
     #attribution {
   position: fixed;
@@ -256,18 +287,12 @@
 }
     /* The block is click-through so it never blocks the graph, but its
        links have to be reachable or they are decoration. */
-    #attribution a { pointer-events: auto; color: rgba(255,255,255,0.45); }
+    #attribution a {
+      pointer-events: auto;
+      color: rgba(255,255,255,0.45);
+      text-decoration: none;
+    }
     #attribution a:hover { color: rgba(255,255,255,0.8); }
-
-#attribution a {
-  color: rgba(255,255,255,0.4);
-  text-decoration: none;
-  pointer-events: all;
-}
-
-#attribution a:hover {
-  color: rgba(255,255,255,0.7);
-}
   </style>
 </head>
 <body>
@@ -345,7 +370,10 @@
   </div>
 </div>
 
-<div id="hint">Scroll to zoom · Drag to pan · Click a node to focus</div>
+<div id="hint">
+  <span class="pointer">Scroll to zoom · Drag to pan · Click a node to focus</span>
+  <span class="touch">Pinch to zoom · Drag to pan · Tap a node to focus</span>
+</div>
 
 <svg></svg>
 

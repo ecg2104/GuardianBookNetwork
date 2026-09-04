@@ -3,8 +3,8 @@
 const svg = d3.select("svg");
 const container = svg.append("g").attr("class", "container");
 
-const width = window.innerWidth;
-const height = window.innerHeight;
+let width = window.innerWidth;
+let height = window.innerHeight;
 svg.attr("width", width).attr("height", height);
 
 // ── Tooltip ───────────────────────────────────────────────────────────────────
@@ -23,7 +23,14 @@ svg.call(zoom);
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let activeNode = null;
-let filterMode = null; // null | { type: "author"|"book"|"voter", id: string }
+let filterMode = null; // null | { mode: "author"|"book"|"voter", id: string }
+// A hover, click-lock or filter takes over which labels are shown. Without
+// this flag, any zoom or pan recomputed labels from the vote threshold and
+// wiped the highlight's labels mid-interaction.
+let labelsLocked = false;
+// Declared here because the zoom handler above closes over it; the real
+// implementation needs the loaded data and is assigned below.
+let updateLabelVisibility = () => {};
 
 // ── Load data ─────────────────────────────────────────────────────────────────
 d3.csv("guardian_votes.csv").then((rows) => {
@@ -59,10 +66,13 @@ d3.csv("guardian_votes.csv").then((rows) => {
     }
   });
   const coLinks = [];
+  const coLinkedByIndex = {};
   Object.entries(pairCounts).forEach(([key, count]) => {
     if (count < 8) return;
     const [source, target] = key.split("|");
     coLinks.push({ source, target, strength: count });
+    coLinkedByIndex[`${source},${target}`] = true;
+    coLinkedByIndex[`${target},${source}`] = true;
   });
 
   // Vote counts → radius
@@ -76,7 +86,9 @@ d3.csv("guardian_votes.csv").then((rows) => {
 
   const maxVotes    = d3.max(nodes, (d) => d.votes);
   const radiusScale = d3.scaleSqrt().domain([1, maxVotes]).range([4, 24]);
-  const edgeWidthScale = d3.scaleLinear().domain([10, 1]).range([0.3, 3.5]);
+  // Clamped: every ballot is ten deep today, but a position outside 1-10
+  // would otherwise interpolate to a negative stroke width.
+  const edgeWidthScale = d3.scaleLinear().domain([10, 1]).range([0.3, 3.5]).clamp(true);
 
   // Adjacency
   const linkedByIndex = {};
@@ -88,6 +100,9 @@ d3.csv("guardian_votes.csv").then((rows) => {
   });
   function isConnected(a, b) {
     return linkedByIndex[`${a.id},${b.id}`] || a.id === b.id;
+  }
+  function isCoLinked(a, b) {
+    return !!coLinkedByIndex[`${a.id},${b.id}`];
   }
 
   // Populate dropdowns
@@ -153,14 +168,15 @@ d3.csv("guardian_votes.csv").then((rows) => {
     .style("opacity", 0)
     .style("pointer-events", "none");
 
-  function updateLabelVisibility() {
+  updateLabelVisibility = function () {
+    // While a highlight is active it owns the labels; leave them alone.
+    if (labelsLocked) return;
     const threshold = Math.max(1, Math.round(12 / currentZoom));
     label.style("opacity", d => {
       if (d.type !== "book") return 0;
-      if (filterMode) return 0; // handled by applyFilter
       return d.votes >= threshold ? 0.92 : 0;
     });
-  }
+  };
   updateLabelVisibility();
 
   // ── Tick ──────────────────────────────────────────────────────────────────
@@ -193,6 +209,7 @@ d3.csv("guardian_votes.csv").then((rows) => {
   function applyFilter(mode, id) {
     filterMode = { mode, id };
     activeNode = null;
+    labelsLocked = true;
 
     let highlightNodeIds = new Set();
 
@@ -256,9 +273,14 @@ d3.csv("guardian_votes.csv").then((rows) => {
   }
 
   function resetHighlight() {
+    labelsLocked = false;
     node.transition().duration(200).style("opacity", 1);
     updateLabelVisibility();
-    label.transition().duration(200).style("fill", "#e0e0e0");
+    // Drop the inline overrides applyHighlight sets so the stylesheet wins.
+    label.transition().duration(200)
+      .style("fill", null)
+      .style("font-size", null)
+      .style("font-style", null);
     link.transition().duration(200)
       .style("stroke-width",   0.7)
       .style("stroke-opacity", d => d.position <= 3 ? 0.35 : 0.15)
@@ -334,17 +356,30 @@ d3.csv("guardian_votes.csv").then((rows) => {
         (bookList ? `<div class="tt-voters">${bookList}</div>` : "")
       );
     }
-    tooltip
-      .style("left", event.pageX + 14 + "px")
-      .style("top",  event.pageY - 10 + "px")
-      .transition().duration(120).style("opacity", 1);
+    positionTooltip(event);
+    tooltip.transition().duration(120).style("opacity", 1);
+  }
+
+  // Nodes on the right and bottom edges pushed the tooltip off-screen, and
+  // the body is overflow:hidden, so it was simply clipped. Flip it instead.
+  function positionTooltip(event) {
+    const pad = 12;
+    const box = tooltip.node().getBoundingClientRect();
+    let x = event.pageX + 14;
+    let y = event.pageY - 10;
+    if (x + box.width + pad > window.innerWidth) x = event.pageX - box.width - 14;
+    if (y + box.height + pad > window.innerHeight) y = window.innerHeight - box.height - pad;
+    tooltip.style("left", Math.max(pad, x) + "px").style("top", Math.max(pad, y) + "px");
   }
 
   function applyHighlight(d) {
+    labelsLocked = true;
+    // Co-occurrence neighbours sit between the two: their dashed edge is lit
+    // below, so the node it lands on has to be visible.
     node.transition().duration(150)
-      .style("opacity", o => isConnected(d, o) ? 1 : 0.06);
+      .style("opacity", o => isConnected(d, o) ? 1 : isCoLinked(d, o) ? 0.5 : 0.06);
     label.transition().duration(150)
-      .style("opacity", o => isConnected(d, o) ? 1 : 0)
+      .style("opacity", o => isConnected(d, o) ? 1 : isCoLinked(d, o) ? 0.55 : 0)
       .style("fill",    o => o.id === d.id ? "#fff" : o.type === "voter" ? "#4dabf7" : "#ccc")
       .style("font-size",    o => o.type === "voter" ? "9px" : "10px")
       .style("font-style",   o => o.type === "voter" ? "italic" : "normal");
@@ -406,6 +441,16 @@ d3.csv("guardian_votes.csv").then((rows) => {
     svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity);
   });
 
+  // Both the centring force and the click-to-zoom transform read width and
+  // height, so a resized or rotated window needs them refreshed.
+  window.addEventListener("resize", () => {
+    width  = window.innerWidth;
+    height = window.innerHeight;
+    svg.attr("width", width).attr("height", height);
+    simulation.force("center", d3.forceCenter(width / 2, height / 2));
+    simulation.alpha(0.15).restart();
+  });
+
   document.getElementById("panelToggle").addEventListener("click", () => {
     const panel = document.getElementById("panel");
     panel.classList.toggle("collapsed");
@@ -413,4 +458,14 @@ d3.csv("guardian_votes.csv").then((rows) => {
       panel.classList.contains("collapsed") ? "▸" : "▾";
   });
 
+}).catch((err) => {
+  console.error("Could not load guardian_votes.csv:", err);
+  d3.select("#panel").style("display", "none");
+  d3.select("#hint").style("display", "none");
+  d3.select("body").append("div").attr("id", "error").html(
+    "The vote data could not be loaded.<br>" +
+    'If you are running this locally, serve it over HTTP — opening the file ' +
+    "directly does not work.<br><br>" +
+    '<a href="https://github.com/ssitari/GuardianBookNetwork">ssitari/GuardianBookNetwork</a>'
+  );
 });
