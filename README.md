@@ -57,12 +57,12 @@ Force layout:
 
 ## Data
 
-**Voting data:** Compiled by [Matthew Aldridge](https://github.com/mpaldridge) from the Guardian poll. Source: [guardian-100-novels](https://github.com/mpaldridge/guardian-100-novels/blob/main/votes.csv), licensed under Apache License 2.0.
+**Voting data:** Compiled by [Matthew Aldridge](https://github.com/mpaldridge) from the Guardian poll. Source: [guardian-100-novels](https://github.com/mpaldridge/guardian-100-novels/blob/main/votes.csv). No licence is stated by the compiler; the data is used here with attribution. Contact [Matthew Aldridge](https://mpaldridge.github.io) about reuse terms.
 
-Modifications: author names were edited and reformatted for display and sorting by surname; a Top 100 indicator was added.
+Modifications: author names were edited and reformatted for display and sorting by surname; a Top 100 indicator was added. Two entries for Camus's *L'Étranger* ("The Outsider" and "The Stranger") were merged into one novel, and three spellings of J. L. Carr's name were normalised.
 
 **Original Guardian story:**
-The Guardian. (2026, May 16). The 100 best novels of all time. https://www.theguardian.com/books/ng-interactive/2026/may/16/story-behind-100-best-novels-all-time
+The Guardian. (2026, May 16). The 100 best novels of all time. https://www.theguardian.com/books/ng-interactive/2026/may/12/the-100-best-novels-of-all-time
 
 ---
 
@@ -86,4 +86,4 @@ Most of the code written with assistance from [Claude](https://claude.ai) (Anthr
 
 ## License
 
-Original dataset licensed under Apache License 2.0. Visualization code MIT — free to use, adapt, and redistribute with attribution.
+Visualization code is MIT (see [LICENSE](LICENSE)) — free to use, adapt, and redistribute with attribution. The underlying vote data is not covered by that licence; see **Data** above.
